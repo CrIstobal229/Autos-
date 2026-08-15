@@ -18,7 +18,7 @@ Ver [vision.md](./vision.md), [requirements.md](./requirements.md) y [architectu
 | T-003 | Crear proyecto Supabase production (plan Pro) | T-002 | Pendiente | Proyecto Pro activo, backups diarios/PITR habilitados — **requiere confirmación tuya**: implica cargo real (~US$25/mes) a tu cuenta |
 | T-004 | Configurar Vercel: conectar repo, variables de entorno por ambiente | T-001, T-002 | Completada | Proyecto `sgo3/autos-usados` linkeado, URL + anon key seteadas en las 3 environments. Deploy de preview real (`vercel deploy`) quedó en estado Ready usando esas env vars. Preview automático **por PR de GitHub** específicamente queda pendiente de T-006 (conectar el repo) |
 | T-005 | Configurar Supabase CLI local + carpeta `supabase/migrations` | T-001, T-002 | Completada | `supabase db push` aplicó una migración vacía de prueba sin error a staging |
-| T-006 | Configurar GitHub Actions CI (lint, typecheck, test) | T-001 | Pendiente | CI falla si hay error de lint/tipos; pasa en verde con el proyecto base |
+| T-006 | Configurar GitHub Actions CI (lint, typecheck, test) | T-001 | Completada | Repo conectado (`github.com/CrIstobal229/Autos-`), Vercel↔GitHub linkeado (push a `main` disparó un deploy real automático, `Ready`). CI corrió en GitHub Actions: la primera corrida falló por un bug real (`tsc --noEmit` no ve tipos generados por Next como `LayoutProps`); corregido dejando que `next build` haga el type-check; la corrida corregida terminó en verde (`conclusion: success`), verificado vía la API de GitHub |
 | T-007 | Configurar Sentry (frontend + Edge Functions), free tier | T-001 | Pendiente | Un error forzado de prueba aparece en el dashboard de Sentry |
 | T-008 | Configurar Resend (email transaccional), free tier | T-002 | Pendiente | Un email de prueba se envía y llega correctamente |
 
@@ -67,10 +67,10 @@ Se adelanta este grupo porque no depende del flujo de publicación/verificación
 
 | ID | Tarea | Depende de | Estado | Criterio de aceptación |
 |---|---|---|---|---|
-| T-029 | Wizard: formulario de datos obligatorios del vehículo (REQ-PUB-001) | T-011, T-020 | Pendiente | Todos los campos obligatorios listados en REQ-PUB-001 son requeridos por el formulario antes de continuar |
-| T-030 | Wizard: carga de fotos por slot obligatorio (mín. 6) | T-018, T-029 | Pendiente | No se puede avanzar sin las 6 fotos de slots obligatorios (frontal, trasera, laterales, interior, odómetro) |
-| T-031 | Guardar aviso como `borrador` en cualquier estado de completitud | T-029 | Pendiente | Se puede guardar y recuperar un aviso a medio llenar sin perder datos |
-| T-032 | Validación de completitud antes de enviar a verificación | T-029, T-030 | Pendiente | Si falta un campo obligatorio o una foto, el sistema rechaza el envío y señala exactamente qué falta (REQ-PUB-001) |
+| T-029 | Wizard: formulario de datos obligatorios del vehículo (REQ-PUB-001) | T-011, T-020 | En progreso | `/publicar/[id]` con todos los campos de REQ-PUB-001. Encontré y arreglé un bug real de esquema: `vehicles`/`listings.price` eran NOT NULL, lo que impedía guardar un borrador parcial — agregué una migración relajándolos. Nueva función `save_vehicle_draft` (RPC, SECURITY DEFINER, porque RLS solo permite escribir `vehicles` vía proceso privilegiado) con su propio smoke test: verifiqué con un usuario simulado que puede crear/editar su borrador y que **otro usuario no puede tocarlo** — eso sí corrió contra la base real. La capa de Server Action/UI no se probó en navegador (sigue sin estar disponible en esta sesión) |
+| T-030 | Wizard: carga de fotos por slot obligatorio (mín. 6) | T-018, T-029 | En progreso | `PhotoSlot` + `uploadPhoto` Server Action escritos, con validación de tipo/tamaño y reemplazo por slot (agregué un índice único parcial para slots requeridos, dejando `otra` libre para múltiples fotos). Sin prueba en navegador |
+| T-031 | Guardar aviso como `borrador` en cualquier estado de completitud | T-029 | Completada | Cubierto por el mismo `save_vehicle_draft`: el smoke test de la migración crea un borrador con solo `brand`/`model` y lo recupera sin error — validado contra la base real, no depende de la UI |
+| T-032 | Validación de completitud antes de enviar a verificación | T-029, T-030 | En progreso | `submitForVerification` revisa cada campo y foto obligatoria y lista exactamente qué falta antes de pasar a `pendiente_verificacion`. Sin prueba en navegador |
 
 ## 07 — Verificación del vehículo (gate de robo)
 

@@ -15,9 +15,14 @@ export async function SiteHeader() {
       </Link>
       <nav className="flex items-center gap-2">
         {user ? (
-          <Button render={<Link href="/perfil" />} variant="outline" size="sm">
-            Mi perfil
-          </Button>
+          <>
+            <Button render={<Link href="/publicar" />} variant="ghost" size="sm">
+              Publicar
+            </Button>
+            <Button render={<Link href="/perfil" />} variant="outline" size="sm">
+              Mi perfil
+            </Button>
+          </>
         ) : (
           <>
             <Button render={<Link href="/login" />} variant="ghost" size="sm">
