@@ -18,7 +18,9 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
+      # `next build` runs Next's own TypeScript check (and generates ambient
+      # types like `LayoutProps`) — a standalone `tsc --noEmit` step here fails
+      # on those generated types, so type-checking happens only via the build.
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
