@@ -250,6 +250,7 @@ RLS **habilitado en todas las tablas**. Regla general: lectura pública solo don
   - Debe ser invocable por un job programado (Cron), no solo por un usuario logueado.
   - Ejemplos: `verify-theft`, `verify-cav`, `process-kyc`, `payment-webhook`, `reverify-active-listings` (cron), `expire-boosts` (cron).
 - No se expone un API REST/GraphQL propio de propósito general — Supabase ya lo provee (PostgREST) protegido por RLS; se evita esa capa extra de mantenimiento.
+- **Patrón adicional descubierto durante la implementación (T-029)**: cuando una tabla debe quedar bloqueada para escritura directa por RLS (ej. `vehicles`, ver §4) pero un usuario normal igual necesita crear/editar sus propias filas, la vía sancionada es una **función SQL `SECURITY DEFINER`** (ej. `save_vehicle_draft`), no el `service_role` desde una Server Action. La función corre con privilegio elevado pero valida `auth.uid()` y la propiedad del recurso explícitamente en su propio código — es el mismo patrón ya usado por `is_admin()` y el trigger de alta de `profiles`. Mantiene el privilegio elevado dentro de Postgres en vez de pasar un secreto `service_role` a Vercel.
 
 ---
 
