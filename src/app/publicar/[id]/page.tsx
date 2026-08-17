@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DraftForm } from "@/components/publicar/draft-form";
 import { PhotoSlot } from "@/components/publicar/photo-slot";
 import { SubmitForVerificationButton } from "@/components/publicar/submit-for-verification-button";
+import { RequestCavButton } from "@/components/publicar/request-cav-button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
@@ -57,6 +58,16 @@ export default async function EditDraftPage({ params }: { params: Promise<{ id: 
   const photosBySlot = new Map((photos ?? []).map((p) => [p.slot, p.storage_path]));
 
   const editable = listing.status === "borrador" || listing.status === "pendiente_verificacion";
+  const canRequestCav = listing.status === "pendiente_verificacion" || listing.status === "activo";
+
+  const { data: existingCavPayment } = canRequestCav
+    ? await supabase
+        .from("payments")
+        .select("id")
+        .eq("listing_id", id)
+        .eq("type", "cav_check")
+        .maybeSingle()
+    : { data: null };
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
@@ -114,6 +125,16 @@ export default async function EditDraftPage({ params }: { params: Promise<{ id: 
           <Separator />
 
           <SubmitForVerificationButton listingId={id} />
+        </>
+      )}
+
+      {canRequestCav && (
+        <>
+          <Separator />
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium">Sube tu Índice de Confianza</h2>
+            <RequestCavButton listingId={id} alreadyRequested={!!existingCavPayment} />
+          </section>
         </>
       )}
     </main>

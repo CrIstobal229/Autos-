@@ -3,10 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { relativeTimeFromNow } from "@/lib/relative-time";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { TrustScore } from "@/components/trust-score";
 
-// T-040: minimal listing detail — just enough to prove the verification badge
-// works end to end. REQ-LISTING-001's full ficha (trust score, contact, etc.)
-// lands in T-049.
+// T-040/T-044/T-045: minimal listing detail — just enough to prove the
+// verification badge and Trust Score work end to end. REQ-LISTING-001's full
+// ficha (contact, seller info, etc.) lands in T-049.
 export default async function VehicleListingPage({
   params,
 }: {
@@ -40,6 +41,14 @@ export default async function VehicleListingPage({
     .limit(1)
     .maybeSingle();
 
+  const { data: trustScore } = await supabase
+    .from("trust_scores")
+    .select("score, breakdown")
+    .eq("listing_id", id)
+    .order("computed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const { data: photos } = await supabase
     .from("listing_photos")
     .select("storage_path, slot")
@@ -64,11 +73,14 @@ export default async function VehicleListingPage({
 
       {lastVerification && (
         <Card>
-          <CardContent className="flex items-center gap-2 py-4">
-            <Badge>Vendedor y vehículo verificados</Badge>
-            <span className="text-muted-foreground text-xs">
-              Antecedentes verificados {relativeTimeFromNow(lastVerification.checked_at)}
-            </span>
+          <CardContent className="flex flex-col gap-3 py-4">
+            <div className="flex items-center gap-2">
+              <Badge>Vendedor y vehículo verificados</Badge>
+              <span className="text-muted-foreground text-xs">
+                Antecedentes verificados {relativeTimeFromNow(lastVerification.checked_at)}
+              </span>
+            </div>
+            <TrustScore data={trustScore ?? null} />
           </CardContent>
         </Card>
       )}

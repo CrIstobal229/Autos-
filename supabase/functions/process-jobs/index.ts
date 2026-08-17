@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 import { checkTheft } from "../_shared/theft-provider.ts";
+import { getVehicleHistory } from "../_shared/cav-provider.ts";
 
 // T-034: generic job queue worker, invoked every 5 minutes by Supabase Cron.
 // architecture.md §9 backoff schedule: 1m, 5m, 30m, 2h, 12h, then give up.
@@ -62,6 +63,39 @@ async function handleVerifyTheft(supabaseAdmin: any, payload: { listing_id: stri
   }
 }
 
+// T-042: triggered by request_cav_check(). Records the CAV result and
+// recomputes the Trust Score (REQ-TRUST-001) — CAV is the highest-weighted
+// optional signal.
+// deno-lint-ignore no-explicit-any
+async function handleVerifyCav(supabaseAdmin: any, payload: { listing_id: string }) {
+  const { data: listing, error: listingError } = await supabaseAdmin
+    .from("listings")
+    .select("id, vehicle_id, vehicles(id, plate)")
+    .eq("id", payload.listing_id)
+    .single();
+
+  if (listingError || !listing) {
+    throw new Error(`listing ${payload.listing_id} not found`);
+  }
+
+  const vehicle = Array.isArray(listing.vehicles) ? listing.vehicles[0] : listing.vehicles;
+  if (!vehicle?.plate) {
+    throw new Error(`listing ${payload.listing_id} has no plate yet`);
+  }
+
+  const result = await getVehicleHistory(vehicle.plate);
+
+  await supabaseAdmin.from("vehicle_verifications").insert({
+    vehicle_id: vehicle.id,
+    source: "cav",
+    is_gate: false,
+    result: "passed",
+    raw_result: result.raw,
+  });
+
+  await supabaseAdmin.rpc("compute_trust_score", { p_listing_id: payload.listing_id });
+}
+
 export default {
   fetch: withSupabase({ auth: ["secret"] }, async (_req, ctx) => {
     const { data: jobs, error } = await ctx.supabaseAdmin
@@ -84,6 +118,8 @@ export default {
       try {
         if (job.type === "verify_theft") {
           await handleVerifyTheft(ctx.supabaseAdmin, job.payload);
+        } else if (job.type === "verify_cav") {
+          await handleVerifyCav(ctx.supabaseAdmin, job.payload);
         } else {
           throw new Error(`unknown job type: ${job.type}`);
         }

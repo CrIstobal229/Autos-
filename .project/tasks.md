@@ -89,11 +89,11 @@ Se adelanta este grupo porque no depende del flujo de publicación/verificación
 
 | ID | Tarea | Depende de | Estado | Criterio de aceptación |
 |---|---|---|---|---|
-| T-041 | Edge Function `verify-cav` (adapter `VehicleHistoryProvider` sobre Autofact) | T-012 | Pendiente | Invocada con una patente de prueba, retorna el historial de propietarios disponible |
-| T-042 | Flujo de pago (CLP 9.990) y solicitud del CAV | T-025, T-041 | Pendiente | El CAV solo se consulta a la fuente externa después de `payments.status='paid'` (REQ-PAY-002) |
-| T-043 | Función de cálculo del Trust Score (excluye gates, REQ-TRUST-001) | T-012, T-042 | Pendiente | El score se recalcula automáticamente al agregar el resultado del CAV; el badge de verificado nunca suma puntos |
-| T-044 | UI: desglose del Trust Score en la ficha | T-043 | Pendiente | Cada punto del score es explicable en la UI (fuente + puntos), nunca solo el número |
-| T-045 | UI: etiqueta "Sin antecedentes adicionales" sin verificaciones opcionales | T-043 | Pendiente | Un listing sin CAV ni otra verificación opcional muestra la etiqueta en vez de "0" (REQ-TRUST-002) |
+| T-041 | Edge Function `verify-cav` (adapter `VehicleHistoryProvider` sobre Autofact) | T-012 | Completada | Igual que T-033: sin tarifa mayorista/API confirmada con Autofact (architecture.md §8/§17), implementado como mock explícito. Desplegada y probada en vivo |
+| T-042 | Flujo de pago (CLP 9.990) y solicitud del CAV | T-025, T-041 | Completada | **Decisión**: en vez de esperar a Flow (T-024/025, bloqueado — sin cuenta), `request_cav_check()` marca el pago como pagado directamente (mock claramente comentado en el código) para poder construir y probar todo el resto del pipeline ahora; cambiar a un checkout real de Flow no debería tocar nada río abajo. Probado de punta a punta contra la infraestructura real: pago → job → verificación CAV → Trust Score, con el resultado correcto |
+| T-043 | Función de cálculo del Trust Score (excluye gates, REQ-TRUST-001) | T-012, T-042 | Completada | Fórmula definida y documentada en la migración: CAV +60, antigüedad de cuenta hasta +40 (1 punto/30 días). Probada en vivo: cuenta nueva sin CAV → breakdown vacío; con CAV → score 60 con el desglose correcto |
+| T-044 | UI: desglose del Trust Score en la ficha | T-043 | Completada | Componente `TrustScore` en `/vehiculos/[id]`, muestra cada fuente y sus puntos, nunca solo el número |
+| T-045 | UI: etiqueta "Sin antecedentes adicionales" sin verificaciones opcionales | T-043 | Completada | Mismo componente: `breakdown.length === 0` → etiqueta neutra en vez de "0/100" (REQ-TRUST-002) |
 
 ## 09 — Búsqueda y ficha
 
